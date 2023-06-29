@@ -1,1 +1,196 @@
-test
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>个人程序开发记录</title>
+    <style>
+        html {
+            font-size: 2rem
+        }
+
+        table thead td {
+            color: #d5c7c7
+        }
+        a {
+            Text-decoration: none;
+        }
+
+        .gray {
+            font-size: 1rem;
+            color: #d5c7c7
+        }
+    </style>
+</head>
+<body>
+<h1 id="h1Wrod"></h1>
+<p id="output"></p>
+<p id="near"></p>
+<p id="synonym"></p>
+<div id="group" style="text-align:left;"></div>
+<script src="https://cdn.bootcss.com/jquery/3.3.1/jquery.js"></script>
+<div id="aeiou"></div>
+<table>
+    <thead>
+    <td style="width: 5rem" > </td>
+    <td style="width: 10rem">memo</td>
+    <td></td>
+    <td></td>
+    <td>c</td>
+    </thead>
+    <tbody id="tbody">
+    </tbody>
+</table>
+</body>
+
+<script>
+    let word
+    document.addEventListener("keydown", function(event) {
+        if (event.key === "9") {
+            $("#if").attr("src", "https://dictionary.cambridge.org/dictionary/english-chinese-simplified/" + word);
+        }
+        if (event.key === "8") {
+            $("#if").attr("src", "https://youdao.com/result?lang=en&word=" + word);
+        }
+    });
+    document.addEventListener("keydown", function(event) {
+        if (event.key === "Enter") {
+            document.getElementById("bt2").focus();
+        }
+    });
+    //方法一：
+    //获取url中的参数
+    function getUrlParam(name) {
+        var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)"); //构造一个含有目标参数的正则表达式对象
+        var r = window.location.search.substr(1).match(reg);  //匹配目标参数
+        if (r != null) return unescape(r[2]);
+        return null; //返回参数值
+    }
+
+    function r(str) {
+        if (!str) {
+            return ''
+        }
+        return str
+    }
+
+    function change(id) {
+        if (id == 1) {
+            $("#if").attr("src", "https://youdao.com/result?word=" + word + "&lang=en");
+        } else if (id == 2) {
+            $("#if").attr("src", "https://dictionary.cambridge.org/dictionary/english-chinese-simplified/" + word);
+        } else {
+            $("#if").attr("src", "https://www.zmji.net/danci/" + word);
+        }
+    }
+    function save(){
+        $.post({url:"http://49.232.12.95:8080/saveMemo", data:
+                JSON.stringify({ word: word, mm: $("#memo").val(), rank: $("#rank").val() }),
+            contentType: "application/json"})
+            .done(function(data) {
+                console.log("Response data:", data);
+            })
+            .fail(function(error) {
+                console.error("Error:", error);
+            });
+    }
+    function aeiou(word){
+        console.log(word)
+        word = word.substring(1,word.length-1)
+        let res=""
+        if (word.indexOf("a")>=0){
+            res+= "=a=闭: cat"
+        }
+        if (word.indexOf("e")>=0){
+            res+= "=e=闭: let"
+        }
+        if (word.indexOf("i")>=0){
+            res+= "=i=闭: fit"
+        }
+        if (word.indexOf("o")>=0){
+            res+= "=o=闭: boss"
+        }
+        if (word.indexOf("u")>=0){
+            res+= "=u=闭: cup"
+        }
+        $("#aeiou").text(res)
+    }
+
+    $(function () {
+        document.getElementById("text1").focus();
+        word = getUrlParam("word");
+        $.get("http://49.232.12.95:8080/select?word=" + word, function (data, status) {
+            if (data.data.word) {
+                aeiou(data.data.word.word)
+                $("#rank").val(data.data.word.coca_rank)
+                $("#tbody").append(`<tr>
+<td>${data.data.word.word}-${r(data.data.word.fs)}</td>
+<td>${r(data.data.word.memo)}[${r(data.data.word.times)}]</td>
+<td>${r(data.data.word.coca_rank)}-${r(data.data.word.fox_key)}</td>
+<td>
+<audio controls="controls" src="https://dict.youdao.com/dictvoice?audio=${data.data.word.word}&type=1"></audio>
+</td>
+<td class="gray">${r(data.data.word.chinese)}</td>
+</tr>`);
+            }
+
+            if (data.data.near && data.data.near.length > 0) {
+                $("#tbody").append("<tr><td class='gray'>near:</td></tr>");
+            }
+            data.data.near.forEach(item => {
+                let str = `<tr><td><a href="eudic://dict/${item.word}">${item.word}</a></td><td>${r(item.memo)}</td>`;
+                str += `
+<td>${r(item.coca_rank)}</td>
+<td>
+<audio controls="controls" src="https://dict.youdao.com/dictvoice?audio=${item.word}&type=1"></audio>
+</td>
+</tr>`;
+                $("#tbody").append(str);
+            });
+
+            if (data.data.synonym && data.data.synonym.length) {
+                $("#tbody").append("<tr><td class='gray'>synonym:</td></tr>");
+            }
+            data.data.synonym.forEach(item => {
+                let str = `<tr>
+<td><a href="eudic://dict/${item.word}">${item.word}</a></td>
+<td>${r(item.coca_rank)}</td>
+<td>${r(item.memo)}</td>
+</tr>`;
+                $("#tbody").append(str);
+            });
+
+            if (data.data.group && data.data.group.length) {
+                $("#tbody").append("<tr><td class='gray'>group:</td></tr>");
+            }
+            data.data.group.forEach(item => {
+                let str = `<tr><td><a href="eudic://dict/${item.word}">${item.word}</a></td><td>${r(item.memo)}</td>`;
+                str += `<td>${r(item.coca_rank)}</td></tr>`;
+                $("#tbody").append(str);
+            });
+
+        });
+
+
+        // $.get("https://dictionary.cambridge.org/dictionary/english-chinese-simplified/"+word,function(data){
+        //   $('#content').html(data);
+        // });
+    });
+</script>
+
+<input type="text" id="memo" style="font-size:25px" placeholder="memo" />
+<input type="text" id="rank" style="font-size:25px;width:50px" placeholder="rank" />
+<button onclick="save()">save memo</button>
+<button onclick="change(1)" id="bt1">yd</button>
+<button onclick="change(2)">cam(9)</button>
+<button onclick="change(3)">怎么记</button>
+<button id="bt2">_</button>
+<input type="text" id="text1" style="font-size:25px" />
+<iframe width='100%' id="if" height='3000px' src='' scrolling="no">
+</iframe>
+<div id="content">
+
+</div>
+
+<a href="https://beian.miit.gov.cn/" target="_blank">备案号</a>
+<a href="https://beian.miit.gov.cn/" target="_blank">津ICP备19003224号</a>
+</html>
